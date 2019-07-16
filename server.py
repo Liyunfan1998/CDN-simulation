@@ -28,7 +28,7 @@ class Server:  # 服务器(cache)
         elif self.replacement_algo == 'LFU':
             # 取出该key的访问次数
             if file.fid not in self.visited:
-                self.visited[file.fid] = 0
+                self.visited[file.fid] = 1
             count = self.visited[file.fid]
             # 对访问次数进行+1
             self.visited[file.fid] += 1
@@ -45,14 +45,16 @@ class Server:  # 服务器(cache)
             while self.remain < file.size:  # 如果缓存满了
                 self.remain += self.cache.popitem(last=False)[-1]  # pop出第一个item
         elif self.replacement_algo == 'LFU':
-            while self.remain < file.size:  # 如果缓存满了
-                temp_key, temp_val = self.key_list[self.mincount].popitem(
-                    last=False)  # next(iter(self.key_list[self.mincount].items()))
+            while self.remain < file.size and len(self.key_list[self.mincount]):  # 如果缓存满了
+                temp_key, temp_val = self.key_list[self.mincount].popitem(last=False)
+                # next(iter(self.key_list[self.mincount].items()))
                 del self.cache[temp_key]
                 del self.visited[temp_key]
                 del self.key_list[self.mincount][temp_key]
                 self.visited[file.fid] = 0
-        self.cache[file.fid] = file.size
+        self.cache[file.fid] = self.key_list[1][file.fid] = file.size
+        # count = self.visited[file.fid]
+        # self.key_list[count + 1][file.fid] = None
         self.remain -= file.size
 
     def handle(self, file):  # 处理一次请求

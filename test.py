@@ -77,8 +77,8 @@ import pandas as pd
 from copy import deepcopy
 import numpy as np
 
-FILE_NUM = int(100)
-REQUEST_NUM = int(200)
+FILE_NUM = int(1e4)
+REQUEST_NUM = int(1e6)
 client = Client(FILE_NUM, REQUEST_NUM)
 print("total number of requests", client.total_client_requests)
 server_hit_rate, server_hit_rate_with_attack = [], []
