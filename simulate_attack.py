@@ -12,7 +12,7 @@ print("total number of requests", client.total_client_requests)
 # pd.DataFrame(client.trace).to_csv('trace_normal.csv')  # 'trace_' + str(np.random.randint(1000)) + '.csv'
 # pd.DataFrame(client.trace_with_attack).to_csv('trace_attack.csv')
 
-fig = plt.figure(figsize=(3, 15))
+fig = plt.figure(figsize=(15, 3))
 ax = fig.add_subplot(111)
 ax.imshow(client.trace, cmap='Greens')
 plt.ylabel("time-slots")
@@ -20,8 +20,9 @@ plt.xlabel("file id")
 plt.title("trace")
 plt.show()
 
-fig = plt.figure(figsize=(3, 15))
+fig = plt.figure(figsize=(15, 3))
 ax = fig.add_subplot(111)
+ax.imshow(client.trace, cmap='Greens')
 ax.imshow(client.trace_with_attack, cmap='Reds')
 plt.ylabel("time-slots")
 plt.xlabel("file id")
@@ -44,7 +45,7 @@ cache_size_array = []
 for cache_size in range(client.file_pool_size // 10, client.file_pool_size, client.file_pool_size // 100):
     cache_size_array.append(cache_size / client.file_pool_size)
     # two identical servers
-    server = Server(cache_size)
+    server = Server(cache_size, 'LFU')
     server_under_attack = deepcopy(server)
 
     # just normal trace
@@ -54,7 +55,7 @@ for cache_size in range(client.file_pool_size // 10, client.file_pool_size, clie
 
     # normal trace with attack trace
     trace = client.trace + client.trace_with_attack
-    print(1000 == len(trace), np.sum(np.sum(client.trace_with_attack)))
+    # print(1000 == len(trace), np.sum(np.sum(client.trace_with_attack)))
     print('normal:', server_hit_rate[-1])
 
     for request_file in client.make_requests(trace):

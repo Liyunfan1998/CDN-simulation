@@ -118,7 +118,7 @@ class Client:  # 用户端 请求文件
         """
         self.trace_with_attack = np.zeros(shape=(self.file_num, self.request_num), dtype=np.int32)
         for time in range(self.request_num):
-            num_requests_for_single_time_stamp = np.random.randint(0, 10)
+            num_requests_for_single_time_stamp = np.random.randint(0, round(self.file_num * 0.005) + 1)
             resultlist = sample(range(0, self.file_num - 1), num_requests_for_single_time_stamp)  # random sample
             for i in resultlist:
                 self.trace_with_attack[i][time] += 1
