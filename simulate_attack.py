@@ -52,7 +52,7 @@ def attack(attack_level):
         cache_size_array.append(cache_size)
         print('cache_size', cache_size)
         # two identical servers
-        server = Server(cache_size, 'LRU')
+        server = Server(cache_size, 'LFU')
         server_under_attack = deepcopy(server)
 
         hit_rate_stable = []  # record hit_rate after each file request

@@ -47,13 +47,16 @@ class Server:  # 服务器(cache)
                     self.remain += self.cache.popitem(last=False)[-1]  # pop出第一个item
                 else:
                     return
-        elif self.replacement_algo == 'LRU':
+        elif self.replacement_algo == 'LFU':
             while self.remain < file.size and len(self.key_list[self.mincount]):  # 如果缓存已经满
                 temp_key, temp_val = self.key_list[self.mincount].popitem(last=False)
                 # next(iter(self.key_list[self.mincount].items()))
                 del self.cache[temp_key]
                 del self.visited[temp_key]
                 del self.key_list[self.mincount][temp_key]
+                self.remain += temp_val
+            if self.remain < file.size:
+                return
             self.visited[file.fid] = 1
             self.key_list[1][file.fid] = file.size
         self.cache[file.fid] = file.size
