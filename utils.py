@@ -18,8 +18,7 @@ def generate_zipf(a=10000, size=1000, file_num=100):
     # y = x ** (-a) / special.zetac(a)
     if len(x) > 0:
         y = x / max(x) * (file_num - 1)
-        y = y.astype('int32')
-        return y
+        return y.astype('int32')
     else:
         return np.array([])
 
@@ -33,8 +32,23 @@ def generate_scan(width, num_for_scan, mu, sigma=3):
     :return: ndarray or scalar
         Drawn samples from the parameterized Scan distribution.
     """
-    width = int(width)
+    width = round(width)
     rest = num_for_scan % width
-    tmp = np.random.normal(mu, sigma, int(num_for_scan / width))
+    tmp = np.random.normal(mu, sigma, round(num_for_scan // width))
     tmp = np.array([round(i) for i in (tmp.tolist() * width + np.random.normal(mu, sigma, rest).tolist())])
-    return tmp - min(tmp) if len(tmp) > 0 else tmp  # make sure all the numbers are bigger or equal to zero
+    return tmp - min(tmp) if len(tmp) and min(tmp) < 0 else tmp  # make sure all the numbers are bigger or equal to zero
+
+
+def generate_exponential(num_for_scan, scale=1.0):
+    return np.random.exponential(scale=scale, size=num_for_scan).astype('int32')
+
+
+def generate_normal(num_for_scan, mu, sigma=3):
+    """
+    :param num_for_scan: how many number to generate for scan distribution
+    :param mu: expectation (or mean)
+    :param sigma: variance
+    :return:
+    """
+    mu, sigma, num_for_scan = 10, 3, 100
+    return np.random.normal(mu, sigma, num_for_scan).astype('int32')

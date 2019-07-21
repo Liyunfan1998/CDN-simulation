@@ -77,13 +77,13 @@ import pandas as pd
 from copy import deepcopy
 import numpy as np
 
-FILE_NUM = int(1e4)
-REQUEST_NUM = int(1e6)
+FILE_NUM = int(1e2)
+REQUEST_NUM = int(1e4)
 client = Client(FILE_NUM, REQUEST_NUM)
 print("total number of requests", client.total_client_requests)
 server_hit_rate, server_hit_rate_with_attack = [], []
 cache_size_array = []
-cache_size = 1000
+cache_size = 10
 print('cache_size / client.file_pool_size', cache_size / client.file_pool_size)
 # two identical servers
 server = Server(cache_size, 'LFU')

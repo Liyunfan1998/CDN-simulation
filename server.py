@@ -43,16 +43,20 @@ class Server:  # 服务器(cache)
         self.miss_count += 1
         if self.replacement_algo == 'LRU':
             while self.remain < file.size:  # 如果缓存满了
-                self.remain += self.cache.popitem(last=False)[-1]  # pop出第一个item
-        elif self.replacement_algo == 'LFU':
-            while self.remain < file.size and len(self.key_list[self.mincount]):  # 如果缓存满了
+                if len(self.cache):  # 防止cache empty
+                    self.remain += self.cache.popitem(last=False)[-1]  # pop出第一个item
+                else:
+                    return
+        elif self.replacement_algo == 'LRU':
+            while self.remain < file.size and len(self.key_list[self.mincount]):  # 如果缓存已经满
                 temp_key, temp_val = self.key_list[self.mincount].popitem(last=False)
                 # next(iter(self.key_list[self.mincount].items()))
                 del self.cache[temp_key]
                 del self.visited[temp_key]
                 del self.key_list[self.mincount][temp_key]
-                self.visited[file.fid] = 0
-        self.cache[file.fid] = self.key_list[1][file.fid] = file.size
+            self.visited[file.fid] = 1
+            self.key_list[1][file.fid] = file.size
+        self.cache[file.fid] = file.size
         # count = self.visited[file.fid]
         # self.key_list[count + 1][file.fid] = None
         self.remain -= file.size
@@ -71,14 +75,6 @@ class Server:  # 服务器(cache)
         # except ZeroDivisionError:
         #     print("Server has not been requested yet!")
         #     return "Server has not been requested yet!"
-
-    def reorganize_space(self):
-        """
-        reorganize the priority queue
-        at the end of every time window
-        :return:
-        """
-        raise NotImplementedError
 
     @abstractmethod
     def set_replacement_algo(self, replacement_algo):
