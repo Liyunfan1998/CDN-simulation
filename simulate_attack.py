@@ -6,8 +6,8 @@ import pandas as pd
 from copy import deepcopy
 import numpy as np
 
-FILE_NUM = int(1e3)
-TIMESTAMP_NUM = int(5e2)
+FILE_NUM = int(1e5)
+TIMESTAMP_NUM = int(5e5)
 client = Client(FILE_NUM, TIMESTAMP_NUM)
 
 print('FILE_NUM', FILE_NUM)

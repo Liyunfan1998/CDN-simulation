@@ -1,0 +1,1 @@
+nohup python3.7 simulate_attack.py > out.txt &
