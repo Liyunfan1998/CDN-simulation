@@ -5,9 +5,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from copy import deepcopy
 import numpy as np
+import gc
 
-FILE_NUM = int(1e5)
-TIMESTAMP_NUM = int(5e5)
+FILE_NUM = int(5e3)
+TIMESTAMP_NUM = int(1e3)
 client = Client(FILE_NUM, TIMESTAMP_NUM)
 
 print('FILE_NUM', FILE_NUM)
@@ -89,6 +90,7 @@ def attack(attack_level):
 attack_levels = {'H', 'M', 'L', 'LL'}  #
 for attack_level in attack_levels:
     attack(attack_level)
+    gc.collect()
 
 rdi = np.random.randint(0, 100)
 
@@ -102,7 +104,7 @@ plt.ylabel("hit_rate_stable@cache_size")
 plt.xlabel("time")
 plt.title("attack-hit_rate-changes")
 plt.legend()
-plt.savefig("attack-hit_rate-changes_" + rdi + ".png")
+plt.savefig("attack-hit_rate-changes_" + str(rdi) + ".png")
 plt.show()
 
 plt.figure(figsize=(10, 5))
@@ -113,5 +115,5 @@ for attack_level in attack_levels:
 plt.xlabel("cache size")
 plt.ylabel("hit rate")
 plt.legend()
-plt.savefig("cache_under_attack_" + rdi + ".png")
+plt.savefig("cache_under_attack_" + str(rdi) + ".png")
 plt.show()
