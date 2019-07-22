@@ -28,7 +28,7 @@ plt.show()
 """
 
 server_hit_rate_dict, server_hit_rate_with_attack_dict = {}, {}
-cache_size_array = [1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5]
+cache_size_array = [1e3, 2e3, 5e3, 1e4, 2e4, 5e4, 1e5, 2e5, 5e5, 1e6]
 print('\n' + '#' * 80 + '\n')
 
 hit_rate_stable_for_all = {}
@@ -90,6 +90,8 @@ attack_levels = {'H', 'M', 'L', 'LL'}  #
 for attack_level in attack_levels:
     attack(attack_level)
 
+rdi = np.random.randint(0, 100)
+
 plt.figure(figsize=(15, 15))
 for cache_size in hit_rate_stable_for_all:
     for attack_level in hit_rate_stable_for_all[cache_size]:
@@ -100,6 +102,7 @@ plt.ylabel("hit_rate_stable@cache_size")
 plt.xlabel("time")
 plt.title("attack-hit_rate-changes")
 plt.legend()
+plt.savefig("attack-hit_rate-changes_" + rdi + ".png")
 plt.show()
 
 plt.figure(figsize=(10, 5))
@@ -110,4 +113,5 @@ for attack_level in attack_levels:
 plt.xlabel("cache size")
 plt.ylabel("hit rate")
 plt.legend()
+plt.savefig("cache_under_attack_" + rdi + ".png")
 plt.show()
