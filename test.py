@@ -96,7 +96,7 @@ for request_file in client.make_requests(client.trace):
 server_hit_rate.append(server.hit_rate())
 
 # normal trace with attack trace
-trace = client.trace + client.trace_with_attack
+trace = client.trace + client.attack_trace
 # print(1000 == len(trace), np.sum(np.sum(client.trace_with_attack)))
 print('normal:', server_hit_rate[-1])
 

@@ -15,7 +15,7 @@ class Client:  # 用户端 请求文件
         self.request_num = request_num  # trace请求数
         self.file_pool = []  # 文件池
         self.file_pool_size = 0  # 文件池总文件大小
-        self.trace, self.trace_with_attack = None, None
+        self.trace, self.attack_trace = None, None
         self.num_of_time_stamps = 1000  # self.num_of_time_stamps 和 self.request_num 是一码事
         self.popular_files = []
         self.__make_files__()
@@ -25,9 +25,9 @@ class Client:  # 用户端 请求文件
         self.total_client_requests = np.sum(np.sum(self.trace))
         self.total_attack_requests = round(self.total_client_requests * 0.1)
         print('total_client_requests:', self.total_client_requests)
-        self.__make_attack_trace__(self.total_attack_requests // self.request_num)  # // self.num_of_time_stamps
-        self.total_attack_requests = np.sum(np.sum(self.trace_with_attack))
-        print('total_attack_requests:', self.total_attack_requests)
+        # self.__make_attack_trace__(self.total_attack_requests // self.request_num, 'H')  # // self.num_of_time_stamps
+        # self.total_attack_requests = np.sum(np.sum(self.trace_with_attack))
+        # print('total_attack_requests:', self.total_attack_requests)
 
     def __make_files__(self):  # 生成文件池(no need to change)
         for i in range(self.file_num):
@@ -111,15 +111,15 @@ class Client:  # 用户端 请求文件
             for i in time:
                 yield self.file_pool[i]  # 对应的文件request
 
-    def __make_attack_trace__(self, single_attack_requests_size):
+    def __make_attack_trace__(self, single_attack_requests_size, attack_level):
         """
         to be used in __make_trace__
         :return:
         """
-        self.trace_with_attack = np.zeros(shape=(self.file_num, self.request_num), dtype=np.int32)
+        self.attack_trace = np.zeros(shape=(self.file_num, self.request_num), dtype=np.int32)
         for time in range(self.request_num):
             num_requests_for_single_time_stamp = np.random.randint(0, round(self.file_num * 0.005) + 1)
             resultlist = sample(range(0, self.file_num - 1), num_requests_for_single_time_stamp)  # random sample
             for i in resultlist:
-                self.trace_with_attack[i][time] += 1
-        self.trace_with_attack = self.trace_with_attack.transpose()
+                self.attack_trace[i][time] += 1
+        self.attack_trace = self.attack_trace.transpose()
