@@ -75,29 +75,3 @@ class Server:  # 服务器(cache)
         hit_rate = self.hit_count / (self.hit_count + self.miss_count + 0.001)
         # print("hit_rate:", hit_rate)
         return hit_rate
-        # except ZeroDivisionError:
-        #     print("Server has not been requested yet!")
-        #     return "Server has not been requested yet!"
-
-    @abstractmethod
-    def set_replacement_algo(self, replacement_algo):
-        self.replacement_algo = replacement_algo
-        # raise NotImplementedError
-
-    def LRU(self):
-        raise NotImplementedError
-
-    def LFU(self):
-        raise NotImplementedError
-
-    def GDSF(self):
-        raise NotImplementedError
-
-    def LHD(self):
-        raise NotImplementedError
-
-    def DeepCache(self):
-        raise NotImplementedError
-
-    def learn_attack_seq(self):
-        raise NotImplementedError

@@ -46,9 +46,6 @@ class Client:  # 用户端 请求文件
                 np.random.shuffle(tmp)
                 for i in tmp:
                     yield self.file_pool[i]
-                    # if time[i]:  # 在这个时间有请求
-                    # for j in range(time[i]):  # 每个文件可能对应有多个请求
-                    #     yield self.file_pool[i]  # 对应的文件request
 
     def generate_normal_client_requests_for_single_time_stamp(self, single_requests_size=1000):
         """
@@ -86,7 +83,6 @@ class Client:  # 用户端 请求文件
             # num_requests_for_single_time_stamp = self.request_num // self.num_of_time_stamps
             num_requests_for_single_time_stamp = np.random.randint(0, self.file_num * 0.25)
             ts = self.generate_normal_client_requests_for_single_time_stamp(num_requests_for_single_time_stamp)
-            # print(ts)
             for i in ts:
                 self.trace[time][i] += 1
 
