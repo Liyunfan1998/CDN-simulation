@@ -10,6 +10,7 @@ class Server:  # 服务器(cache)
     def __init__(self, space, replacement_algo='LRU'):
         self.space = space  # cache大小
         self.remain = space  # cache剩余空间
+        self.attack_in_cache, self.spy = set(), set()  # attack_in_cache记录attack files在内存中的占用, spy用于给attacker提供被踢出的恶意文件的file_id
         self.hit_count, self.miss_count = 0, 0
         self.hit_count_ignore_attack, self.miss_count_ignore_attack = 0, 0
         self.replacement_algo = replacement_algo
@@ -28,8 +29,7 @@ class Server:  # 服务器(cache)
 
     def _hit(self, file, not_attack=True):
         self.hit_count += 1
-        if not_attack:
-            self.hit_count_ignore_attack += 1
+        self.hit_count_ignore_attack += int(not_attack)
         if self.replacement_algo == 'LRU':
             self.cache.move_to_end(file.fid)
         elif self.replacement_algo == 'LFU':
@@ -51,18 +51,25 @@ class Server:  # 服务器(cache)
             self.lhd.add_hit_age(file_size, file_age)
             # 算是重新的一个记录
             self.cache[file.fid] = (file_size, self.clock)
+        return True
+
+    def attack_file_kick_out_alarm(self, attack_file_id):
+        if attack_file_id in self.attack_in_cache:  # cache中的attack文件要是被替换出去需要发报警，攻击方可能希望不流行文件驻留
+            self.attack_in_cache = self.attack_in_cache - set(attack_file_id)
+            self.spy.add(attack_file_id)
 
     def _miss(self, file, not_attack=True):
         self.miss_count += 1
-        if not_attack:
-            self.miss_count_ignore_attack += 1
+        self.miss_count_ignore_attack += int(not_attack)
         if self.replacement_algo == 'LRU':
             while self.remain < file.size:  # 如果缓存满了
                 if len(self.cache):  # 防止cache empty
                     # pop出第一个item
-                    self.remain += self.cache.popitem(last=False)[-1]
+                    temp = self.cache.popitem(last=False)
+                    self.remain += temp[-1]
+                    self.attack_file_kick_out_alarm(temp)
                 else:
-                    return
+                    return False
         elif self.replacement_algo == 'LFU':
             # 如果缓存已经满
             while self.remain < file.size and len(self.key_list[self.mincount]):
@@ -72,15 +79,16 @@ class Server:  # 服务器(cache)
                 del self.cache[temp_key]
                 del self.visited[temp_key]
                 del self.key_list[self.mincount][temp_key]
+                self.attack_file_kick_out_alarm(temp_key)
                 self.remain += temp_val
             if self.remain < file.size:
-                return
+                return False
             self.visited[file.fid] = 1
             self.key_list[1][file.fid] = file.size
         elif self.replacement_algo == 'LHD':
             # 文件太大，缓存不下
             if self.space < file.size:
-                return
+                return False
             # 缓存得下 evict
             while self.remain < file.size:
                 # evict LHD 最小的
@@ -104,6 +112,7 @@ class Server:  # 服务器(cache)
                 # 腾出空间
                 self.remain += del_size
                 del self.cache[del_fid]
+                self.attack_file_kick_out_alarm(del_fid)
         # admit
         if self.replacement_algo == 'LHD':
             self.cache[file.fid] = (file.size, self.clock)
@@ -112,19 +121,24 @@ class Server:  # 服务器(cache)
         # count = self.visited[file.fid]
         # self.key_list[count + 1][file.fid] = None
         self.remain -= file.size
+        return True
 
     def handle(self, file, not_attack=True):  # 处理一次请求
+        """
+        :param file:
+        :param not_attack:
+        :return: cached 缓存中的所有文件
+        """
         cached = file.fid in self.cache.keys()
-        if cached:
-            self._hit(file, not_attack)
-        else:
-            self._miss(file, not_attack)
+        success = self._hit(file, not_attack) if cached else self._miss(file, not_attack)
+        if not not_attack and success:
+            self.attack_in_cache.add(file.fid)
         return cached
 
     def hit_rate(self, ignore_attack=False):
         if ignore_attack:
             hit_rate = self.hit_count_ignore_attack / (
-                        self.hit_count_ignore_attack + self.miss_count_ignore_attack + 0.001)
+                    self.hit_count_ignore_attack + self.miss_count_ignore_attack + 0.001)
         else:
             hit_rate = self.hit_count / (self.hit_count + self.miss_count + 0.001)
         # print("hit_rate:", hit_rate)
