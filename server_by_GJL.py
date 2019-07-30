@@ -55,21 +55,23 @@ class Server:  # 服务器(cache)
 
     def attack_file_kick_out_alarm(self, attack_file_id):
         if attack_file_id in self.attack_in_cache:  # cache中的attack文件要是被替换出去需要发报警，攻击方可能希望不流行文件驻留
-            self.attack_in_cache = self.attack_in_cache - set(attack_file_id)
+            self.attack_in_cache = self.attack_in_cache - set([attack_file_id])
             self.spy.add(attack_file_id)
 
     def _miss(self, file, not_attack=True):
         self.miss_count += 1
-        self.miss_count_ignore_attack += int(not_attack)
+        self.miss_count_ignore_attack += int(not_attack)  # auto-increment if normal request
+        if self.space < file.size: return False
         if self.replacement_algo == 'LRU':
             while self.remain < file.size:  # 如果缓存满了
                 if len(self.cache):  # 防止cache empty
                     # pop出第一个item
                     temp = self.cache.popitem(last=False)
                     self.remain += temp[-1]
-                    self.attack_file_kick_out_alarm(temp)
+                    self.attack_file_kick_out_alarm(temp[0])
                 else:
                     return False
+
         elif self.replacement_algo == 'LFU':
             # 如果缓存已经满
             while self.remain < file.size and len(self.key_list[self.mincount]):
@@ -86,10 +88,7 @@ class Server:  # 服务器(cache)
             self.visited[file.fid] = 1
             self.key_list[1][file.fid] = file.size
         elif self.replacement_algo == 'LHD':
-            # 文件太大，缓存不下
-            if self.space < file.size:
-                return False
-            # 缓存得下 evict
+            # 缓存得下, evict
             while self.remain < file.size:
                 # evict LHD 最小的
                 # 这里采用的是动态计算的方法，没有查表
@@ -131,7 +130,7 @@ class Server:  # 服务器(cache)
         """
         cached = file.fid in self.cache.keys()
         success = self._hit(file, not_attack) if cached else self._miss(file, not_attack)
-        if not not_attack and success:
+        if not not_attack and success and not cached:  # only miss will a file be loaded into attack_in_cache
             self.attack_in_cache.add(file.fid)
         return cached
 

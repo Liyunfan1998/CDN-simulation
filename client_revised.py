@@ -76,7 +76,7 @@ class Client:  # 用户端 请求文件
         to be used in __make_trace__
         :return:
         """
-        self.attack_trace = [[]] * self.num_of_time_stamps
+        # self.attack_trace = [[]] * self.num_of_time_stamps
         self.num_attack_for_each_time_stamp = []
         max_num_requests_for_single_time_stamp = round(
             self.total_client_requests / self.num_of_time_stamps * self.level_percentage_mapping[attack_level])
@@ -103,36 +103,49 @@ class Client:  # 用户端 请求文件
             # result_list = []
             # self.attack_trace[time] = result_list
 
-        print('total_attack_requests:', sum(self.num_attack_for_each_time_stamp))
+        # print('total_attack_requests:', sum(self.num_attack_for_each_time_stamp))  # 理想化的total_attack_requests
 
     def __make_attack_trace_for_single_time_stamp__(self, cache, time, num_requests=100, pattern='Random', spy=None):
         if pattern == 'Random':
-            self.attack_trace[time] = sample(range(0, self.file_num - 1), num_requests)  # random sample
+            # self.attack_trace[time] =\
+            return sample(range(0, self.file_num - 1), num_requests)  # random sample
         elif pattern == 'KC':  # knowing what's in cache
-            self.attack_trace[time] = self.generate_attack_requests_knowing_cache_for_single_time_stamp(set(cache),
-                                                                                                        num_requests)
+            # self.attack_trace[time] = \
+            return self.generate_attack_requests_knowing_cache_for_single_time_stamp(set(cache),
+                                                                                     num_requests)
         elif pattern == 'KCS':  # knowing what's in cache and make attack files stay cached
-            attack_files_kicked_out = self.generate_attack_requests_to_stay_in_cache_knowing_cache_for_single_time_stamp(spy)
+            attack_files_kicked_out = self.generate_attack_requests_to_stay_in_cache_knowing_cache_for_single_time_stamp(
+                spy)
             len_l = len(attack_files_kicked_out)
-            self.attack_trace[time] = attack_files_kicked_out[0:min(len_l, num_requests)] + \
-                                      self.generate_attack_requests_knowing_cache_for_single_time_stamp(
-                                          set(cache), num_requests - len_l)
+            # self.attack_trace[time] = \
+            return attack_files_kicked_out[0:min(len_l, num_requests)] + \
+                   self.generate_attack_requests_knowing_cache_for_single_time_stamp(
+                       set(cache), num_requests - len_l)
+        # if len(spy):
+        #     print('time:', time, 'stay in cache:', min(len_l, num_requests), 'random:',
+        #           max(num_requests - len_l, 0), 'out of cache:', len(spy))
 
-    def generate_attack_requests_knowing_cache_for_single_time_stamp(self, file_cached,
-                                                                     requests_size=100):  # file_cached is a set
-        if requests_size <= 0: return []
-        file_not_cached = list(self.file_pool_set - file_cached)
-        try:
-            return list(set(sample(file_not_cached, requests_size)))
-        except ValueError:
-            # print("ValueError: Sample larger than population or is negative")
-            print('ValueError **** file_not_cached:', len(file_not_cached), 'requests_size:', requests_size)
-            return list(set(sample(file_not_cached, len(file_not_cached))))
 
-    @staticmethod
-    def generate_attack_requests_to_stay_in_cache_knowing_cache_for_single_time_stamp(attack_file_kicked_out):
-        """
-        :param attack_file_kicked_out: 一个set
-        :return: 一个list，每个被踢出的恶意文件请求一次，使其驻留服务器内存，如果被踢出的恶意文件太多，则只请求requests_size个
-        """
-        return list(attack_file_kicked_out)
+def generate_attack_requests_knowing_cache_for_single_time_stamp(self, file_cached,
+                                                                 requests_size=100):  # file_cached is a set
+    if requests_size <= 0: return []
+    file_not_cached = list(self.file_pool_set - file_cached)
+    try:
+        return list(set(sample(file_not_cached, requests_size)))
+    except ValueError:
+        # print("ValueError: Sample larger than population or is negative")
+        print('ValueError **** file_not_cached:', len(file_not_cached), 'requests_size:', requests_size)
+        return list(set(sample(file_not_cached, len(file_not_cached))))
+
+
+@staticmethod
+def generate_attack_requests_to_stay_in_cache_knowing_cache_for_single_time_stamp(attack_file_kicked_out):
+    """
+    :param attack_file_kicked_out: 一个set
+    :return: 一个list，每个被踢出的恶意文件请求一次，使其驻留服务器内存，如果被踢出的恶意文件太多，则只请求requests_size个
+    """
+    return list(attack_file_kicked_out)
+
+
+def clear_attack_trace(self):
+    self.attack_trace = [[]] * self.num_of_time_stamps
