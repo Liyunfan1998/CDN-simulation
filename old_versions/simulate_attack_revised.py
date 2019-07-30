@@ -1,7 +1,6 @@
 from client_revised import Client
-from server import Server
+from old_versions.server import Server
 import matplotlib.pyplot as plt
-import pandas as pd
 import operator
 from copy import deepcopy
 from functools import reduce

@@ -1,8 +1,3 @@
-import matplotlib as mpl
-import matplotlib.pyplot as pyplot
-import numpy as np
-import pandas as pd
-
 """
 # make values from -5 to 5, for this example
 zvals = np.random.rand(100, 100) * 10
@@ -71,11 +66,8 @@ plt.show()
 """
 
 from client import Client
-from server import Server
-import matplotlib.pyplot as plt
-import pandas as pd
+from old_versions.server import Server
 from copy import deepcopy
-import numpy as np
 
 FILE_NUM = int(1e2)
 REQUEST_NUM = int(1e4)

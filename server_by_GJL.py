@@ -10,10 +10,10 @@ class Server:  # 服务器(cache)
     def __init__(self, space, replacement_algo='LRU'):
         self.space = space  # cache大小
         self.remain = space  # cache剩余空间
-        self.hit_count = 0  # 命中次数
-        self.miss_count = 0  # 未命中次数
+        self.hit_count, self.miss_count = 0, 0
+        self.hit_count_ignore_attack, self.miss_count_ignore_attack = 0, 0
         self.replacement_algo = replacement_algo
-        self.clock = 0      # LHD 当前时刻
+        self.clock = 0  # LHD 当前时刻
         if self.replacement_algo == 'LRU':
             self.cache = OrderedDict()  # OrderDict() 模拟cache LRU方法
         elif self.replacement_algo == 'LFU':
@@ -26,8 +26,10 @@ class Server:  # 服务器(cache)
             self.lhd = LHD(base_size=32)
             self.cache = {}
 
-    def _hit(self, file):
+    def _hit(self, file, not_attack=True):
         self.hit_count += 1
+        if not_attack:
+            self.hit_count_ignore_attack += 1
         if self.replacement_algo == 'LRU':
             self.cache.move_to_end(file.fid)
         elif self.replacement_algo == 'LFU':
@@ -50,8 +52,10 @@ class Server:  # 服务器(cache)
             # 算是重新的一个记录
             self.cache[file.fid] = (file_size, self.clock)
 
-    def _miss(self, file):
+    def _miss(self, file, not_attack=True):
         self.miss_count += 1
+        if not_attack:
+            self.miss_count_ignore_attack += 1
         if self.replacement_algo == 'LRU':
             while self.remain < file.size:  # 如果缓存满了
                 if len(self.cache):  # 防止cache empty
@@ -88,12 +92,12 @@ class Server:  # 服务器(cache)
                 del_lhd = float('inf')
                 for fid in self.cache:
                     size = self.cache[fid][0]
-                    age = self.clock-self.cache[fid][1]
+                    age = self.clock - self.cache[fid][1]
                     lhd = self.lhd.get_lhd(size, age)
                     if lhd < del_lhd:
                         del_fid = fid
                         del_size = size
-                        del_age = age      
+                        del_age = age
                         del_lhd = lhd
                 # 记录一次 miss_age，对应红盒子
                 self.lhd.add_miss_age(del_size, del_age)
@@ -109,14 +113,19 @@ class Server:  # 服务器(cache)
         # self.key_list[count + 1][file.fid] = None
         self.remain -= file.size
 
-    def handle(self, file):  # 处理一次请求
-        if file.fid in self.cache.keys():
-            self._hit(file)
+    def handle(self, file, not_attack=True):  # 处理一次请求
+        cached = file.fid in self.cache.keys()
+        if cached:
+            self._hit(file, not_attack)
         else:
-            self._miss(file)
+            self._miss(file, not_attack)
+        return cached
 
-    def hit_rate(self):
-        # try:
-        hit_rate = self.hit_count / (self.hit_count + self.miss_count + 0.001)
+    def hit_rate(self, ignore_attack=False):
+        if ignore_attack:
+            hit_rate = self.hit_count_ignore_attack / (
+                        self.hit_count_ignore_attack + self.miss_count_ignore_attack + 0.001)
+        else:
+            hit_rate = self.hit_count / (self.hit_count + self.miss_count + 0.001)
         # print("hit_rate:", hit_rate)
         return hit_rate

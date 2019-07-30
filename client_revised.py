@@ -25,6 +25,7 @@ class Client:  # 用户端 请求文件
         print('total_client_requests:', self.total_client_requests)
         self.file_pool_set = set(range(self.file_num))
         self.num_attack_for_each_time_stamp = []
+        self.zg = ZipfGenerator(n=self.file_num, alpha=0.7)
 
     def __make_files__(self):  # 生成文件池(no need to change)
         for i in range(self.file_num):
@@ -45,7 +46,8 @@ class Client:  # 用户端 请求文件
         """
         # print('single_requests_size', single_requests_size)
         zipf_size = round(single_requests_size * 0.7)  # zipf files takes 70% of the total trace
-        zipf = generate_zipf(a=1.2, size=zipf_size, file_num=self.file_num)
+        # zipf = generate_zipf(a=1.2, size=zipf_size, file_num=self.file_num)
+        zipf = self.zg.gen_arr(zipf_size)
 
         scan_size = single_requests_size - zipf_size  # scan files takes 30% of the total trace
         pop_scan_width = round(

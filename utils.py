@@ -4,6 +4,7 @@ from scipy import special
 
 def generate_zipf(a=10000, size=1000, file_num=100):
     """
+    已弃置
     :param a:float or array_like of floats
         Distribution parameter. Should be greater than 1.
     :param size:int or tuple of ints, optional
@@ -21,6 +22,36 @@ def generate_zipf(a=10000, size=1000, file_num=100):
         return y.astype('int32')
     else:
         return np.array([])
+
+
+import math, bisect, random
+from functools import reduce
+
+
+class ZipfGenerator:
+    """
+    alpha can be less than one
+    """
+
+    def __init__(self, n, alpha):
+        # Calculate Zeta values from 1 to n:
+        tmp = [1. / (math.pow(float(i), alpha)) for i in range(1, round(n) + 1)]
+        zeta = reduce(lambda sums, x: sums + [sums[-1] + x], tmp, [0])
+
+        # Store the translation map:
+        self.distMap = [x / zeta[-1] for x in zeta]
+
+    def next(self):
+        # Take a uniform 0-1 pseudo-random value:
+        u = random.random()
+        # Translate the Zipf variable:
+        return bisect.bisect(self.distMap, u) - 1
+
+    def gen_arr(self, output_size):
+        out = []
+        for i in range(output_size):
+            out.append(self.next())
+        return np.array(out)
 
 
 def generate_scan(width, num_for_scan, mu, sigma=3):

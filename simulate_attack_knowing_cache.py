@@ -1,5 +1,5 @@
 from client_revised import Client
-from server import Server
+from server_by_GJL import Server
 import matplotlib.pyplot as plt
 import pandas as pd
 import operator
@@ -46,23 +46,26 @@ def attack(attack_level):
             server_hit_rate.append(server.hit_rate())
             print('normal:', 'cache_size:', cache_size, server_hit_rate[-1])
 
-        # normal trace with attack trace
-        trace = [client.trace[i] + client.attack_trace[i] for i in range(client.num_of_time_stamps)]
-        for lst in trace: np.random.shuffle(lst)  # 再次打乱同一时间片内的请求
+        # normal trace with attack trace ---- (f,not_attack)
+        trace = [[(f, True) for f in client.trace[i]] + [(f, False) for f in client.attack_trace[i]] for i in
+                 range(client.num_of_time_stamps)]
+        for lst in trace:
+                np.random.shuffle(lst)  # 再次打乱同一时间片内的请求
         hit_rate_stable = []  # reset hit_rate_stable
         for request_file in reduce(operator.concat, trace):
-            server_under_attack.handle(client.file_pool[request_file])
-            hit_rate_stable.append(server_under_attack.hit_rate())  # record hit_rate after each file request
+            server_under_attack.handle(client.file_pool[request_file[0]], request_file[1])
+            hit_rate_stable.append(
+                server_under_attack.hit_rate(ignore_attack=True))  # record hit_rate after each file request
 
         hit_rate_stable_for_all[cache_size][attack_level] = hit_rate_stable
-        server_hit_rate_with_attack.append(server_under_attack.hit_rate())
+        server_hit_rate_with_attack.append(server_under_attack.hit_rate(ignore_attack=True))
         print('attack:', attack_level, 'cache_size:', cache_size, server_hit_rate_with_attack[-1])
     if not server_hit_rate_with_attack_dict['N']:
         server_hit_rate_with_attack_dict['N'] = server_hit_rate
     server_hit_rate_with_attack_dict[attack_level] = server_hit_rate_with_attack
 
 
-attack_levels = {'H'}  #, 'M', 'L', 'LL'
+attack_levels = {'H'}  # , 'M', 'L', 'LL'
 for attack_level in attack_levels:
     attack(attack_level)
     gc.collect()

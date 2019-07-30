@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 
 from client import Client
-from server import Server
+from old_versions.server import Server
 
 FILE_NUM = int(1e2)
 REQUEST_NUM = int(1e4)
