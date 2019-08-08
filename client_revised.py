@@ -11,7 +11,7 @@ class File:
 
 
 class Client:  # 用户端 请求文件
-    def __init__(self, file_num, request_num):
+    def __init__(self, file_num, request_num, real_trace=None):
         self.file_num = file_num  # 文件池数量
         self.zg = ZipfGenerator(n=self.file_num, alpha=0.7)
         self.num_of_time_stamps = request_num  # trace请求数
@@ -19,13 +19,30 @@ class Client:  # 用户端 请求文件
         self.file_pool_size = 0  # 文件池总文件大小
         self.level_percentage_mapping = {'H': 0.2, 'M': 0.02, 'L': 0.002, 'LL': 0.0002}
         self.trace, self.attack_trace = [], [[]] * self.num_of_time_stamps
-        self.__make_files__()
-        self.file_mapping = [i for i in range(self.file_num)]
-        np.random.shuffle(self.file_mapping)  # 乱序
-        self.__make_trace__()
-        self.total_client_requests = sum([len(i) for i in self.trace])
-        print('total_client_requests:', self.total_client_requests)
         self.num_attack_for_each_time_stamp = []
+        if not real_trace:
+            self.__make_files__()
+            self.file_mapping = [i for i in range(self.file_num)]
+            np.random.shuffle(self.file_mapping)  # 乱序
+            self.__make_trace__()
+            self.total_client_requests = sum([len(i) for i in self.trace])
+            print('total_client_requests:', self.total_client_requests)
+        else:
+            df = pd.read_csv(real_trace, header=None)
+            df.columns = ['Timestamp', 'Hostname', 'DiskNumber', 'Type', 'Offset', 'Size', 'ResponseTime']
+            del df['Hostname'], df['DiskNumber']
+            self.total_client_requests = len(df)
+            print('total_client_requests:', self.total_client_requests)
+            file_dict = {}
+            for i in range(self.total_client_requests):
+                tmp = df.loc[i]
+                if tmp.Offset not in file_dict:
+                    file_dict[tmp.Offset] = tmp.Size
+                    self.file_pool_size += tmp.Size
+                    self.file_pool.append(File(tmp.Offset, tmp.Size))
+            self.trace = np.append(np.array(df.Offset), np.zeros(1000 - len(df3.index) % 1000)).reshape(1000, -1)
+            # file_df = pd.DataFrame.from_dict(file_dict, orient='index').reset_index()
+
 
     def __make_files__(self):  # 生成文件池(no need to change)
         for i in range(self.file_num):
