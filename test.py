@@ -1,5 +1,6 @@
 from cacheout import Cache
 from cacheout.lru import LRUCache
+from numpy.random import shuffle
 from cacheout.lfu import LFUCache
 import time
 
@@ -11,6 +12,8 @@ client1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'] * (loop_size // 10)
 client2 = ['A', 'B', 'C', 'D', 'E', 'F'] * (loop_size // 6)
 client3 = ['a', 'b'] * (loop_size // 2)
 client1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'X'] * (loop_size // 11 + 1)
+
+clients = [client1, client2, client3]
 
 # client_attack = (['X'] + [None] * 14) * (loop_size // 15)  # 20 'X's
 # client1 = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', 'X'] * 20 \
@@ -30,10 +33,11 @@ def handle_request(req, cache, hit, miss):
 
 
 for i in range(loop_size):
-    hit, miss = handle_request(client1[i], cache, hit, miss)
-    hit, miss = handle_request(client2[i], cache, hit, miss)
-    hit, miss = handle_request(client3[i], cache, hit, miss)
-    # hit, miss = handle_request(client_attack[i], cache, hit, miss)
+    tmp = [item[i] for item in clients]
+    shuffle(tmp)
+    for t in tmp:
+        print(t)
+        hit, miss = handle_request(t, cache, hit, miss)
 
 print(hit, miss)
 print('hit_rate', hit / (hit + miss))
