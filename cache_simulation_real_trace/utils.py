@@ -83,3 +83,36 @@ def generate_normal(num_for_scan, mu, sigma=3):
     """
     mu, sigma, num_for_scan = 10, 3, 100
     return np.random.normal(mu, sigma, num_for_scan).astype('int32')
+
+
+def readTraceForBucketModel(path, map=True, periodSize=None):
+    with open(path, 'r') as f:
+        trace = f.readline().split(",")
+    if map:
+        countDict = generateMapDict(trace)
+        trace = [countDict[i] for i in trace]
+    if periodSize and type(periodSize) is int:
+        cutSize = len(trace) // periodSize * periodSize
+        trace = np.reshape(trace[:cutSize], (-1, periodSize))
+    return trace
+
+
+def generateMapDict(lst):
+    countRepeatReq = generateCountDict(lst)
+    mapDict = {}
+    j = 0
+    for i in countRepeatReq:
+        mapDict[i[0]] = j
+        j += 1
+    return mapDict
+
+
+def generateCountDict(lst):
+    countRepeatReq = {}
+    for req in lst:
+        if req in countRepeatReq:
+            countRepeatReq[req] += 1
+        else:
+            countRepeatReq[req] = 1
+    countRepeatReq = sorted(countRepeatReq.items(), key=lambda d: d[1], reverse=True)
+    return countRepeatReq
