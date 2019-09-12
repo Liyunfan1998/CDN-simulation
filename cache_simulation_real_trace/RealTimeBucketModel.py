@@ -54,12 +54,13 @@ class RealTimeBucketModel:
         globalMinHR, globalMinHR_allTraffic = 1, []
         self.historyCache = historyCache
         pool = multiprocessing.Pool(processes=50)
-        for i in range(1000 * attackSize):
+        for i in range(1 * attackSize):
             print("\tTime", i)
             if len(self.attackCandidates):
                 attackTraffic = choice(self.attackCandidates, size=self.periodLength * attackSize, replace=True)
                 la = len(attackTraffic)
-                for i in range(self.repeatTimes):
+                for i in range(1):
+                # for i in range(self.repeatTimes):
                     allTraffic = self.scatterAttackIntoTrace(attackTraffic, self.requestsInPeriodDict, la, lt)
                     """太无奈了， multiprocessing不支持序列化自定义对象，numpy也不免"""
                     result = pool.apply(simAttack, args=(cacheSize, allTraffic))
@@ -153,7 +154,7 @@ def simAttack(cacheSize, allTraffic):
     else:
         c = RealTimeBucketModel.SimCache(cacheSize)  # new cache????
     hr = c.processTrace(allTraffic)
-    print('\t' + hr)
+    print('\t' + str(hr))
     return hr, allTraffic
 
 
@@ -162,7 +163,11 @@ if __name__ == '__main__':
     cacheSize = 20
     trace = readTraceForBucketModel("../sample.txt", map=True, periodSize=periodSize)
     realTimeBucketModel = None
+    timeC = 0
     for requestsInPeriod in trace:
+        timeC += 1
+        OriginalCache = RealTimeBucketModel.SimCache(cacheSize)
+        print("Baseline", timeC, OriginalCache.processTrace(requestsInPeriod))
         realTimeBucketModel = RealTimeBucketModel(requestsInPeriod, periodSize, cacheSize, realTimeBucketModel)
         attackSize = round(normal(loc=0.1 * periodSize, scale=1.0, size=None))
         globalMinHR_allTraffic = realTimeBucketModel.findBestAttack(cacheSize, attackSize, realTimeBucketModel.cache)
