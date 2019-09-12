@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 from utils import readTraceForBucketModel, generateCountDict
 from numpy.random import shuffle, choice, normal
 from numpy import array
@@ -5,6 +6,9 @@ from cacheout.lfu import LFUCache
 import time, gc
 from collections import Counter
 from copy import deepcopy
+import multiprocessing
+
+historyCache = None  # 要当全局变量
 
 
 class RealTimeBucketModel:
@@ -46,18 +50,30 @@ class RealTimeBucketModel:
 
     def findBestAttack(self, cacheSize, attackSize, historyCache=None):
         """try different attackTraffic and return a best choice, can use RL approach???"""
+        print("attackSize", attackSize)
         globalMinHR, globalMinHR_allTraffic = 1, []
-
-        for i in range(10000 * attackSize):
+        self.historyCache = historyCache
+        pool = multiprocessing.Pool(processes=50)
+        for i in range(1000 * attackSize):
+            print("\tTime", i)
             if len(self.attackCandidates):
                 attackTraffic = choice(self.attackCandidates, size=self.periodLength * attackSize, replace=True)
-                minHR, allTraffic = self.simAttack(cacheSize, attackTraffic, historyCache)
-                if minHR < globalMinHR:
-                    globalMinHR_allTraffic = allTraffic
-                    globalMinHR = minHR
+                la = len(attackTraffic)
+                for i in range(self.repeatTimes):
+                    allTraffic = self.scatterAttackIntoTrace(attackTraffic, self.requestsInPeriodDict, la, lt)
+                    """太无奈了， multiprocessing不支持序列化自定义对象，numpy也不免"""
+                    result = pool.apply(simAttack, args=(cacheSize, allTraffic))
+                    # minHR, allTraffic = self.simAttack(cacheSize, attackTraffic, historyCache)
+                    minHR, allTraffic = result  # .get()
+                    if minHR < globalMinHR:
+                        globalMinHR_allTraffic = allTraffic
+                        globalMinHR = minHR
             # clean up the memory
             if i % 1000 == 0:
                 gc.collect()
+
+        pool.close()
+        pool.join()
         print("found global Min HR", globalMinHR)
         print("#" * 30)
         # print("globalMinHR_allTraffic", globalMinHR_allTraffic)
@@ -91,17 +107,17 @@ class RealTimeBucketModel:
                 tmp_k_plus_one = item[1]
         return None
 
-    def simAttack(self, cacheSize, attackTraffic, historyCache=None):
+    def simAttack(self, cacheSize=None, attackTraffic=None, historyCache=None):
         """not focusing on the coming sequence"""
         hr_list = []
-        la, lt = len(attackTraffic), len(trace)
+        la = len(attackTraffic)
         for i in range(self.repeatTimes):
             # shuffle(allTraffic) # don't make sense
-            allTraffic = self.scatterAttackIntoTrace(attackTraffic, self.requestsInPeriodDict, la, lt)
-            if historyCache:
-                self.cache = historyCache
+            allTraffic = self.scatterAttackIntoTrace(self.attackTraffic, self.requestsInPeriodDict, la, lt)
+            if self.historyCache:
+                self.cache = self.historyCache
             else:
-                self.cache = self.SimCache(cacheSize)  # new cache????
+                self.cache = self.SimCache(self.cacheSize)  # new cache????
             c = self.cache
             hr = c.processTrace(allTraffic)
             hr_list.append(hr)
@@ -130,8 +146,19 @@ class RealTimeBucketModel:
         return allTraffic
 
 
+def simAttack(cacheSize, allTraffic):
+    """not focusing on the coming sequence"""
+    if historyCache:
+        c = deepcopy(historyCache)
+    else:
+        c = RealTimeBucketModel.SimCache(cacheSize)  # new cache????
+    hr = c.processTrace(allTraffic)
+    print('\t' + hr)
+    return hr, allTraffic
+
+
 if __name__ == '__main__':
-    periodSize = 50
+    lt = periodSize = 50
     cacheSize = 20
     trace = readTraceForBucketModel("../sample.txt", map=True, periodSize=periodSize)
     realTimeBucketModel = None
