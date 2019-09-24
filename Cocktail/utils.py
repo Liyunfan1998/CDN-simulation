@@ -1,102 +1,39 @@
 import numpy as np
 from scipy import special
-
-
-def generate_zipf(a=10000, size=1000, file_num=100):
-    """
-    已弃置
-    :param a:float or array_like of floats
-        Distribution parameter. Should be greater than 1.
-    :param size:int or tuple of ints, optional
-        Output shape. If the given shape is, e.g., (m, n, k),
-        then m * n * k samples are drawn. If size is None (default),
-        a single value is returned; if a is a scalar;
-        np.array(a).size samples are drawn.
-    :return:ndarray or scalar
-        Drawn samples from the parameterized Zipf distribution.
-    """
-    x = np.random.zipf(a, size)
-    # y = x ** (-a) / special.zetac(a)
-    if len(x) > 0:
-        y = x / max(x) * (file_num - 1)
-        return y.astype('int32')
-    else:
-        return np.array([])
-
-
 import math, bisect, random
 from functools import reduce
+from collections import defaultdict
 
 
-class ZipfGenerator:
+class TraceGenerator:
     """
-    alpha can be less than one
+    store the args in self and createTrace with the params
     """
 
-    def __init__(self, n, alpha):
+    def __init__(self, period_length=50):
+        self.period = period_length
+
+    def set_period_len(self, period_length):
+        self.period = period_length
+
+    def generate_zipf(self, n=100, alpha=0.7, num_samples=50):
         # Calculate Zeta values from 1 to n:
-        tmp = [1. / (math.pow(float(i), alpha)) for i in range(1, round(n) + 1)]
-        zeta = reduce(lambda sums, x: sums + [sums[-1] + x], tmp, [0])
-
+        tmp = np.power(np.arange(1, n + 1), -alpha)
+        zeta = np.r_[0.0, np.cumsum(tmp)]
         # Store the translation map:
-        self.distMap = [x / zeta[-1] for x in zeta]
+        distMap = [x / zeta[-1] for x in zeta]
+        # Generate an array of uniform 0-1 pseudo-random values:
+        u = np.random.random(num_samples)
+        # bisect them with distMap
+        v = np.searchsorted(distMap, u)
+        samples = [t - 1 for t in v]
+        return samples
 
-    def next(self):
-        # Take a uniform 0-1 pseudo-random value:
-        u = random.random()
-        # Translate the Zipf variable:
-        return bisect.bisect(self.distMap, u) - 1
+    def generate_exponential(num_samples=50, scale=10):
+        return np.random.exponential(scale=scale, size=num_samples).astype('int32')
 
-    def gen_arr(self, output_size):
-        out = []
-        for i in range(output_size):
-            out.append(self.next())
-        return np.array(out)
-
-
-def generate_zipf(n, alpha, numSamples):
-    # Calculate Zeta values from 1 to n:
-    tmp = np.power(np.arange(1, n + 1), -alpha)
-    zeta = np.r_[0.0, np.cumsum(tmp)]
-    # Store the translation map: 
-    distMap = [x / zeta[-1] for x in zeta]
-    # Generate an array of uniform 0-1 pseudo-random values:
-    u = np.random.random(numSamples)
-    # bisect them with distMap
-    v = np.searchsorted(distMap, u)
-    samples = [t - 1 for t in v]
-    return samples
-
-
-def generate_scan(width, num_for_scan, mu, sigma=3):
-    """
-    :param width: how wide the scan peak is
-    :param num_for_scan: how many number to generate for scan distribution
-    :param mu: expectation (or mean)
-    :param sigma: variance
-    :return: ndarray or scalar
-        Drawn samples from the parameterized Scan distribution.
-    """
-    width = round(width)
-    rest = num_for_scan % width
-    tmp = np.random.normal(mu, sigma, round(num_for_scan // width))
-    tmp = np.array([round(i) for i in (tmp.tolist() * width + np.random.normal(mu, sigma, rest).tolist())])
-    return tmp - min(tmp) if len(tmp) and min(tmp) < 0 else tmp  # make sure all the numbers are bigger or equal to zero
-
-
-def generate_exponential(num_for_scan, scale=1.0):
-    return np.random.exponential(scale=scale, size=num_for_scan).astype('int32')
-
-
-def generate_normal(num_for_scan, mu, sigma=3):
-    """
-    :param num_for_scan: how many number to generate for scan distribution
-    :param mu: expectation (or mean)
-    :param sigma: variance
-    :return:
-    """
-    mu, sigma, num_for_scan = 10, 3, 100
-    return np.random.normal(mu, sigma, num_for_scan).astype('int32')
+    def generate_normal(num_samples=50, mu=0, sigma=25):
+        return np.random.normal(mu, sigma, num_samples).astype('int32')
 
 
 def cluster_by_freq_slow(frq_dict):
@@ -107,3 +44,26 @@ def cluster_by_freq_slow(frq_dict):
         else:
             bucket[v].append(k)
     return bucket
+
+
+def cluster_by_freq(freq_dict):
+    """
+    freq_dict is a dict, mapping file to the number of times it is requested in a period
+    eg. freq_dict = {'a':3,'b':5,'c':11}
+    return {3:['a'],5:['b'],11:['c']}
+    """
+    d = defaultdict(list)
+    pairs = enumerate(freq_dict) if isinstance(freq_dict, list) else freq_dict.items()
+    for k, v in pairs:
+        d[v].append(k)
+    return d
+
+
+def count_freq(req_list):
+    """
+    trace_in_period is a list of requests
+    eg. trace_in_period=[a,b,c,c,b,c,c,c,b,b,a,c,c,c,c,a,b,c,c]
+    freq_dict is a dict, mapping file to the number of times it is requested in a period
+    eg. freq_dict = {'a':3,'b':5,'c':11}
+    """
+    return dict((a, req_list.count(a)) for a in set(req_list))

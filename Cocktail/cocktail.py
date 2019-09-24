@@ -1,51 +1,16 @@
 # -*- coding: UTF-8 -*-
-import utils
+from utils import *
 from numpy.random import shuffle, choice, normal
 from numpy import array
 from cacheout.lfu import LFUCache
 from cacheout.lru import LRUCache
 import time, gc
 from collections import Counter
+from pandas import DataFrame
 from copy import deepcopy
 import multiprocessing
 
-
-def cluster_by_freq(frq_dict):
-    """
-    freq_dict is a dict, mapping file to the number of times it is requested in a period
-    eg. freq_dict = {'a':3,'b':5,'c':11}
-    return {3:['a'],5:['b'],11:['c']}
-    """
-    d = defaultdict(list)
-    pairs = enumerate(data) if isinstance(data, list) else data.items()
-    for k, v in pairs:
-        d[v].append(k)
-    return d
-
-
-def count_freq(req_list):
-    """
-    trace_in_period is a list of requests
-    eg. trace_in_period=[a,b,c,c,b,c,c,c,b,b,a,c,c,c,c,a,b,c,c]
-    freq_dict is a dict, mapping file to the number of times it is requested in a period
-    eg. freq_dict = {'a':3,'b':5,'c':11}
-    """
-    return dict((a, req_list.count(a)) for a in set(req_list))
-
-
-class TraceGenerator:
-    """
-    store the args in self and createTrace with the params
-    """
-
-    def __init__(self):
-        pass
-
-    def param_setter(self, distribution, params=dict()):
-        pass
-
-    def create_trace(self):
-        pass
+rg = [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.]
 
 
 class CocktailModel:
@@ -55,16 +20,20 @@ class CocktailModel:
     provide the calculated hit rate
     """
 
-    def __init__(self, trace_in_period, cacheSize, history_stage=None, history_importance=0.5):
+    def __init__(self, trace_in_period, cacheSize, history_importance=0.5):
         """
         construct a cocktail model based on the given request pattern in a fixed period of time
         """
         self.cacheSize = cacheSize
-        bartending_cocktail(trace_in_period)
+        self.history_freq_dict = {}
+        self.history_importance = history_importance
+        self.bartending_cocktail(trace_in_period)
 
     def moving_average_for_freq(self, freq_dict, history_freq_dict):
-        for k in history_stage:
-            history_freq_dict[k] = history_freq_dict[k] / 2
+        for k in history_freq_dict:
+            history_freq_dict[k] = history_freq_dict[k] * self.history_importance
+        for k in freq_dict:
+            freq_dict[k] = freq_dict[k] * (1 - self.history_importance)
         X, Y = Counter(freq_dict), Counter(history_freq_dict)
         self.history_freq_dict = self.freq_dict = dict(X + Y)
 
@@ -73,7 +42,7 @@ class CocktailModel:
         find and return kth level index ---- k
         """
         virtualCacheSize = 0
-        sortedBucket = sorted(self.stage.items(), key=lambda x: x[0], reverse=True)
+        sortedBucket = sorted(self.bucket.items(), key=lambda x: x[0], reverse=True)
         for item in sortedBucket:
             virtualCacheSize += len(item[1])
             if virtualCacheSize >= self.cacheSize:
@@ -83,16 +52,18 @@ class CocktailModel:
         return None
 
     def bartending_cocktail(self, trace_in_period):
-        freq_dict = count_frq(trace_in_period)
+        freq_dict = count_freq(trace_in_period)
         self.moving_average_for_freq(freq_dict, self.history_freq_dict)
-        bucket = cluster_by_freq(self.freq_dict)
+        self.bucket = cluster_by_freq(self.freq_dict)
         self.surface_level_freq = self.featCacheSize()
 
-    def calculate_hitrate_theo(self, cache, distribution, params):
+    def calculate_hitrate_theo(self, distribution='absolute order', params=None):
         """
         provide a quick formula for calculation of hit rate
         """
         if distribution == 'absolute order':
+            if not self.surface_level_freq:
+                return 1
             miss = len([k for k, v in self.freq_dict.items() if v >= self.surface_level_freq])
             return 1 - miss / len(self.freq_dict)
         elif distribution == 'normal':
@@ -100,8 +71,6 @@ class CocktailModel:
         elif distribution == 'exp':
             pass
         elif distribution == 'zipf':
-            pass
-        elif distribution == 'bino':
             pass
 
 
@@ -131,3 +100,34 @@ class RealCache:
         for req in trace:
             self.handle_request(req)
         return self.hit / (self.hit + self.miss + 0.01)  # hit rate
+
+
+if __name__ == '__main__':
+    for cache_Size in range(10, 100, 10):
+        global_plot_record = {'lfu': [], 'lru': [], 0.: [], 0.1: [], 0.2: [], 0.3: [], 0.4: [], 0.5: [], 0.6: [],
+                              0.7: [], 0.8: [], 0.9: [], 1: []}
+        real_cache_lfu = RealCache(cache_Size, 'LFU')
+        real_cache_lru = RealCache(cache_Size, 'LRU')
+        traceGenerator = TraceGenerator(50)
+        print('zipf: n=100, alpha=0.7, num_samples=50')
+        last_cocktail = None
+        cocktails = None
+        trace = [traceGenerator.generate_zipf(n=100, alpha=0.7, num_samples=50) for i in range(20)]
+        for period_trace in trace:
+            # print('lfu', real_cache_lfu.hit_rate(period_trace))
+            # print('lru', real_cache_lru.hit_rate(period_trace))
+            global_plot_record['lfu'].append(real_cache_lfu.hit_rate(period_trace))
+            global_plot_record['lru'].append(real_cache_lru.hit_rate(period_trace))
+            if not cocktails:
+                x = rg
+                y = [CocktailModel(period_trace, cache_Size, history_importance=hi) for hi in rg]
+                cocktails = dict(zip(x, y))
+
+            for history_importance in rg:
+                cocktails[history_importance].bartending_cocktail(period_trace)
+                global_plot_record[history_importance].append(
+                    cocktails[history_importance].calculate_hitrate_theo())
+            #     print('cocktail with history_importance', history_importance, cocktail.calculate_hitrate_theo())
+            # print('*' * 20)
+        DataFrame(global_plot_record).to_excel('./cache_Size' + str(cache_Size) + '.xlsx')
+        print('cache_Size:', cache_Size, global_plot_record)
