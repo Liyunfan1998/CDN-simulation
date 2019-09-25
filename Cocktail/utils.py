@@ -29,11 +29,11 @@ class TraceGenerator:
         samples = [t - 1 for t in v]
         return samples
 
-    def generate_exponential(num_samples=50, scale=10):
+    def generate_exponential(self, scale=10, num_samples=50):
         return np.random.exponential(scale=scale, size=num_samples).astype('int32')
 
-    def generate_normal(num_samples=50, mu=0, sigma=25):
-        return np.random.normal(mu, sigma, num_samples).astype('int32')
+    def generate_normal(self, mu=0, sigma=25, num_samples=50):
+        return np.abs(np.random.normal(mu, sigma, num_samples).astype('int32'))
 
 
 def cluster_by_freq_slow(frq_dict):
@@ -66,4 +66,5 @@ def count_freq(req_list):
     freq_dict is a dict, mapping file to the number of times it is requested in a period
     eg. freq_dict = {'a':3,'b':5,'c':11}
     """
+    req_list = list(req_list)
     return dict((a, req_list.count(a)) for a in set(req_list))

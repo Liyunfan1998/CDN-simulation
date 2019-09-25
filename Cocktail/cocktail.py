@@ -1,7 +1,7 @@
 # -*- coding: UTF-8 -*-
 from utils import *
 from numpy.random import shuffle, choice, normal
-from numpy import array
+from numpy import array,reshape
 from cacheout.lfu import LFUCache
 from cacheout.lru import LRUCache
 import time, gc
@@ -103,16 +103,25 @@ class RealCache:
 
 
 if __name__ == '__main__':
+    traceGenerator = TraceGenerator(50)
+    # trace = [traceGenerator.generate_zipf(n=100, alpha=0.7, num_samples=50) for i in range(20)]
+    # print('zipf: n=100, alpha=0.7, num_samples=50')
+
+    # trace = [traceGenerator.generate_exponential(scale=20) for i in range(20)]
+    # print('exp: n=100, scale=10')
+
+    trace = [list(traceGenerator.generate_normal(sigma=10)) for i in range(20)]
+    # print('normal: mu=0, sigma=25')
+    print(trace)
+    exit(0)
+
     for cache_Size in range(10, 100, 10):
         global_plot_record = {'lfu': [], 'lru': [], 0.: [], 0.1: [], 0.2: [], 0.3: [], 0.4: [], 0.5: [], 0.6: [],
                               0.7: [], 0.8: [], 0.9: [], 1: []}
         real_cache_lfu = RealCache(cache_Size, 'LFU')
         real_cache_lru = RealCache(cache_Size, 'LRU')
-        traceGenerator = TraceGenerator(50)
-        print('zipf: n=100, alpha=0.7, num_samples=50')
         last_cocktail = None
         cocktails = None
-        trace = [traceGenerator.generate_zipf(n=100, alpha=0.7, num_samples=50) for i in range(20)]
         for period_trace in trace:
             # print('lfu', real_cache_lfu.hit_rate(period_trace))
             # print('lru', real_cache_lru.hit_rate(period_trace))
@@ -130,4 +139,5 @@ if __name__ == '__main__':
             #     print('cocktail with history_importance', history_importance, cocktail.calculate_hitrate_theo())
             # print('*' * 20)
         DataFrame(global_plot_record).to_excel('./cache_Size' + str(cache_Size) + '.xlsx')
+        # DataFrame(global_plot_record).to_csv('./cache_Size' + str(cache_Size) + '.csv')
         print('cache_Size:', cache_Size, global_plot_record)
