@@ -1,12 +1,13 @@
 # -*- coding: UTF-8 -*-
 from utils import *
 from numpy.random import shuffle, choice, normal
-from numpy import array,reshape
+from numpy import array, reshape
 from cacheout.lfu import LFUCache
 from cacheout.lru import LRUCache
 import time, gc
 from collections import Counter
 from pandas import DataFrame
+import matplotlib.pyplot as plt
 from copy import deepcopy
 import multiprocessing
 
@@ -28,14 +29,15 @@ class CocktailModel:
         self.history_freq_dict = {}
         self.history_importance = history_importance
         self.bartending_cocktail(trace_in_period)
+        self.history_hit_rate = cacheSize / 100
 
     def moving_average_for_freq(self, freq_dict, history_freq_dict):
-        for k in history_freq_dict:
-            history_freq_dict[k] = history_freq_dict[k] * self.history_importance
-        for k in freq_dict:
-            freq_dict[k] = freq_dict[k] * (1 - self.history_importance)
+        # for k in history_freq_dict:
+        #     history_freq_dict[k] = history_freq_dict[k]  # * self.history_importance
+        # for k in freq_dict:
+        #     freq_dict[k] = freq_dict[k]  # * (1 - self.history_importance)
         X, Y = Counter(freq_dict), Counter(history_freq_dict)
-        self.history_freq_dict = self.freq_dict = dict(X + Y)
+        self.history_freq_dict = dict(X + Y)
 
     def featCacheSize(self):
         """
@@ -52,9 +54,9 @@ class CocktailModel:
         return None
 
     def bartending_cocktail(self, trace_in_period):
-        freq_dict = count_freq(trace_in_period)
+        self.period_freq_dict = freq_dict = count_freq(trace_in_period)
         self.moving_average_for_freq(freq_dict, self.history_freq_dict)
-        self.bucket = cluster_by_freq(self.freq_dict)
+        self.bucket = cluster_by_freq(self.history_freq_dict)
         self.surface_level_freq = self.featCacheSize()
 
     def calculate_hitrate_theo(self, distribution='absolute order', params=None):
@@ -63,9 +65,11 @@ class CocktailModel:
         """
         if distribution == 'absolute order':
             if not self.surface_level_freq:
-                return 1
-            miss = len([k for k, v in self.freq_dict.items() if v >= self.surface_level_freq])
-            return 1 - miss / len(self.freq_dict)
+                miss = 0
+            else:
+                miss = len([k for k, v in self.period_freq_dict.items() if v <= self.surface_level_freq])
+            self.history_hit_rate = 0.5 * (self.history_hit_rate + (1 - miss / 50))  # serious bug
+            return self.history_hit_rate
         elif distribution == 'normal':
             pass
         elif distribution == 'exp':
@@ -103,41 +107,63 @@ class RealCache:
 
 
 if __name__ == '__main__':
+    num_stages = 200
     traceGenerator = TraceGenerator(50)
-    # trace = [traceGenerator.generate_zipf(n=100, alpha=0.7, num_samples=50) for i in range(20)]
+    trace = [traceGenerator.generate_zipf(n=100, alpha=0.7, num_samples=50) for i in range(num_stages)]
     # print('zipf: n=100, alpha=0.7, num_samples=50')
 
-    # trace = [traceGenerator.generate_exponential(scale=20) for i in range(20)]
+    # trace = [traceGenerator.generate_exponential(scale=20) for i in range(num_stages)]
     # print('exp: n=100, scale=10')
 
-    trace = [list(traceGenerator.generate_normal(sigma=10)) for i in range(20)]
+    # trace = [list(traceGenerator.generate_normal(sigma=15)) for i in range(num_stages)]
     # print('normal: mu=0, sigma=25')
-    print(trace)
-    exit(0)
+
+    # print([set(trace[0:i*50]) for i in range(num_stages)])
+
+    lst = []
+    st = set()
+    for t in trace:
+        st = st | set(t)
+        lst.append(len(st))
+    # print(len(st))  # count the unique elements in trace
+    print(lst)
 
     for cache_Size in range(10, 100, 10):
-        global_plot_record = {'lfu': [], 'lru': [], 0.: [], 0.1: [], 0.2: [], 0.3: [], 0.4: [], 0.5: [], 0.6: [],
-                              0.7: [], 0.8: [], 0.9: [], 1: []}
+        global_plot_record = {'lfu': [], 'lru': [],
+                              # 0.: [], 0.1: [], 0.2: [], 0.3: [], 0.4: [], 0.5: [], 0.6: [],
+                              # 0.7: [], 0.8: [], 0.9: [], 1: [],
+                              'cocktail': []}
         real_cache_lfu = RealCache(cache_Size, 'LFU')
         real_cache_lru = RealCache(cache_Size, 'LRU')
+
         last_cocktail = None
         cocktails = None
         for period_trace in trace:
+            cocktail = CocktailModel(period_trace, cache_Size)
             # print('lfu', real_cache_lfu.hit_rate(period_trace))
             # print('lru', real_cache_lru.hit_rate(period_trace))
             global_plot_record['lfu'].append(real_cache_lfu.hit_rate(period_trace))
-            global_plot_record['lru'].append(real_cache_lru.hit_rate(period_trace))
-            if not cocktails:
-                x = rg
-                y = [CocktailModel(period_trace, cache_Size, history_importance=hi) for hi in rg]
-                cocktails = dict(zip(x, y))
+            # global_plot_record['lru'].append(real_cache_lru.hit_rate(period_trace))
+            cocktail.bartending_cocktail(period_trace)
+            global_plot_record['cocktail'].append(cocktail.calculate_hitrate_theo())
 
-            for history_importance in rg:
-                cocktails[history_importance].bartending_cocktail(period_trace)
-                global_plot_record[history_importance].append(
-                    cocktails[history_importance].calculate_hitrate_theo())
+            # if not cocktails:
+            # x = rg
+            # y = [CocktailModel(period_trace, cache_Size, history_importance=hi) for hi in rg]
+            # cocktails = dict(zip(x, y))
+
+            # for history_importance in rg:
+            #     cocktails[history_importance].bartending_cocktail(period_trace)
+            #     global_plot_record[history_importance].append(
+            #         cocktails[history_importance].calculate_hitrate_theo())
             #     print('cocktail with history_importance', history_importance, cocktail.calculate_hitrate_theo())
             # print('*' * 20)
-        DataFrame(global_plot_record).to_excel('./cache_Size' + str(cache_Size) + '.xlsx')
+        # DataFrame(global_plot_record).to_excel('./cache_Size' + str(cache_Size) + '.xlsx')
         # DataFrame(global_plot_record).to_csv('./cache_Size' + str(cache_Size) + '.csv')
-        print('cache_Size:', cache_Size, global_plot_record)
+        print('cache_Size:', cache_Size, global_plot_record['cocktail'])
+
+        plt.figure(figsize=(10, 5))
+        for i in global_plot_record:
+            plt.plot(global_plot_record[i])
+            plt.ylim(0, 1)
+        plt.show()
