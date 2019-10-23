@@ -11,9 +11,8 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 import multiprocessing
 
-
 rg = [0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.]
-# plt.ion()
+
 
 class CocktailModel:
     """
@@ -30,7 +29,7 @@ class CocktailModel:
         self.history_freq_dict = {}
         self.history_importance = history_importance
         self.bartending_cocktail(trace_in_period)
-        # self.history_hit_rate = cacheSize / globle_file_range
+        self.history_hit_rate = cacheSize / globle_file_range
         self.history_miss = 0
         self.req_count = 0
 
@@ -65,21 +64,47 @@ class CocktailModel:
         self.req_count += 50
         if distribution == 'absolute order':
             if not self.surface_level_freq:
+                miss = 0
+            else:
+                miss = len([k for k, v in self.period_freq_dict.items() if v == self.surface_level_freq])
+            self.history_hit_rate = 0.5 * (self.history_hit_rate + (1 - miss / 50))  # serious bug
+            return self.history_hit_rate
+        elif distribution == 'sim':
+            if not self.surface_level_freq:
                 miss = 0  # should be the prob that the requested item is in cache * 50
             else:
                 # miss = len([k for k, v in self.period_freq_dict.items() if v <= self.surface_level_freq])
                 losers = [k for k, v in self.period_freq_dict.items() if v <= self.surface_level_freq]
                 miss = sum([int(i in losers) for i in period_trace])
             self.history_miss += miss
-            # self.history_hit_rate = 0.5 * (self.history_hit_rate + (1 - miss / 50))  # serious bug
             self.history_hit_rate = 1 - self.history_miss / self.req_count
             return self.history_hit_rate
-        elif distribution == 'normal':
-            pass
         elif distribution == 'exp':
             pass
         elif distribution == 'zipf':
             pass
+
+
+class CocktailModel2:
+    """
+    given a distribution and a trace,
+    given the pre-fixed settings of a cache,
+    provide the calculated hit rate
+    """
+
+    def file_req_time_mapping(self, whole_trace):
+        self.file_req_time_map = {}
+        t = 0
+        for i in whole_trace:
+            t += 1
+            if i not in self.file_req_time_map:
+                self.file_req_time_map[i] = []
+            else:
+                self.file_req_time_map[i].append(t)
+
+    def fit_distribution_for_file(self, file_id):
+        tmp = array(self.file_req_time_map[file_id])
+        return tmp[1:] - tmp[:-1]
 
 
 class RealCache:

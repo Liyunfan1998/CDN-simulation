@@ -10,12 +10,6 @@ class TraceGenerator:
     store the args in self and createTrace with the params
     """
 
-    def __init__(self, period_length=50):
-        self.period = period_length
-
-    def set_period_len(self, period_length):
-        self.period = period_length
-
     def generate_zipf(self, n=100, alpha=0.7, num_samples=50):
         # Calculate Zeta values from 1 to n:
         tmp = np.power(np.arange(1, n + 1), -alpha)
